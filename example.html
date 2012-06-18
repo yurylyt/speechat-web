@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    
+    <link href="resources/css/bootstrap.css" rel="stylesheet">
+
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+    </style>
+    <script type="text/javascript">
+        var REST_URL = "/rest/chat/";
+        var room = "injection";
+        var member = 'surg';
+        var timer;
+        $(document).ready(function () {
+            if (member.length == 0)
+                register();
+            else
+                init();
+        });
+
+        function init() {
+            var title = '#' + room + ' @ SpeeChat';
+            $("#head-bar").text(title);
+            document.title = title;
+            callServer();
+            $("#author").text(member);
+            $("#post").submit(function () {
+                post(room, member);
+                return false;
+            });
+        }
+        
+        function codeHandlers() {
+            return {
+                404: function() {document.location = "/client"}
+            }
+        }
+
+        function register() {
+
+
+            $.ajax({url:REST_URL + room, statusCode:codeHandlers()}).done(function (data) {
+                path = document.location.pathname;
+                if (path[path.length - 1] != "/")
+                    data = "/" + data;
+                document.location = document.location + data;
+            });
+        }
+
+        function updateContainer(data) {
+            var response = eval(data);
+            $(response.messages).each(function (index, msg) {
+                var sender = $("<div/>").addClass("author").text(msg.author + ":");
+                var msgLabel = $("<div/>").addClass("content").text(msg.message);
+                var date = $.format.date(new Date(msg.date), "MMM, dd HH:mm");
+                var dateLabel = $("<div/>").addClass("date").text(date);
+
+                var msgDiv = $("<div/>").addClass("message").append(sender).append(msgLabel).append(dateLabel);
+                $("#container").append(msgDiv);
+            });
+            timer = setTimeout(poll, 2000);
+        }
+        
+        function poll() {
+            callServer("/new");
+        }
+
+        function callServer(suffix) {
+            if (!suffix) suffix = '';
+            $.ajax({url:REST_URL + room + "/" + member + suffix, statusCode: codeHandlers()})
+                    .done(updateContainer);
+        }
+
+        function post(room, member) {
+            var msgInput = $("#message");
+            var msg = msgInput.val();
+            if (msg.trim().length == 0)
+                return;
+            msgInput.val('');
+            msgInput.attr('disabled', 'disabled');
+            $("#submit").attr('disabled', 'disabled');
+
+            $.ajax({
+                       type:"POST",
+                       url:REST_URL + room + "/" + member,
+                       data:{message:msg}
+
+                   }).always(postPost).fail(function () {failed("post")})
+        }
+        function postPost() {
+            $("#message").removeAttr('disabled');
+            $("#submit").removeAttr('disabled');
+            clearTimeout(timer);
+            poll(); // Call the server immediately
+        }
+
+        function cancelPoll() {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        }
+
+        function failed(msg) {
+            alert(msg + " failed. Try again later");
+        }
+    </script>
+<title>#injection @ SpeeChat</title></head>
+<body>
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">          
+          <span class="brand">#injection @ SpeeChat</span>          
+        </div>
+      </div>
+    </div>
+<div id="container" class="container">
+    <div class="row">
+        <div class="span6">
+            <blockquote>
+                <p>
+                    туса туса еее ))))
+                </P>
+                <small><strong>torr</strong><span>, May, 24 19:35</span></small>
+            </blockquote>
+            <blockquote>
+                <p>
+                    хеллоу
+                </p>
+                <small><strong>atha</strong>, May, 24 19:36</small>
+            </blockquote>
+
+        </div>
+    </div>
+    
+<div class="form-horizontal">
+    <form id="post" action="" method="post">
+        <input type="text" placeholder="Type your message..." name="message" maxlength="140" class="input-xlarge">
+        <button class="btn btn-success" type="submit">Post</button>
+        <button value="Stop auto refresh" onclick="cancelPoll()" class="btn btn-danger">Stop auto-refresh</button>
+        <div>
+            <blockquote>
+                <small><strong>surg</strong></small>
+            </blockquote>
+        </div>
+        
+    </form>
+</div>
+
+
+</body></html>
